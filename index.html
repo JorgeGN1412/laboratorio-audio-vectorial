@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u/KG3R70edJ4T22JzbRT6a6TGE7LwvLeZVi7yC2ROTE='; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; media-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Groove Lab · Mezcla vectorial</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,Segoe UI,sans-serif;background:#101219;color:#ecedf5}*{box-sizing:border-box}body{margin:0}main{max-width:1260px;margin:auto;padding:32px 24px}header{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:32px}.eyebrow{font-size:14px;letter-spacing:.15em;color:#a4f7c4}h1{font-size:clamp(30px,5vw,48px);letter-spacing:-.04em;margin:8px 0}p{color:#abb2c8;line-height:1.6}.tag{border:1px solid #394052;border-radius:24px;padding:10px 16px;color:#bec5d9;font-size:14px}.workspace{display:grid;grid-template-columns:350px 1fr;gap:24px}.panel{background:#191d28;border:1px solid #2a3040;border-radius:18px;padding:24px;margin-bottom:20px}h2{font-size:19px;margin:0 0 16px}h3{font-size:17px;margin:0 0 15px}label{display:block;font-size:14px;margin-top:18px;color:#c6cde0}label span{float:right;font-variant-numeric:tabular-nums}input[type=range]{width:100%;margin:12px 0 0;accent-color:var(--c,#a4f7c4)}.channel{border-top:3px solid var(--c)}.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}button,select{font:inherit;border-radius:9px;border:1px solid #454d63;background:#262d3d;color:#eef3ff;padding:11px 14px;cursor:pointer;min-height:44px}button.primary{background:#a4f7c4;color:#14251b;font-weight:700;border-color:#a4f7c4}button:focus-visible,select:focus-visible{outline:3px solid #b3a0ff;outline-offset:3px}canvas{width:100%;height:270px;display:block;background:#121620;border-radius:12px}.legend{font-size:14px;display:flex;gap:18px;margin:16px 0;flex-wrap:wrap}.legend b{font-weight:500}.formula{font-size:19px;line-height:1.7;color:#a4f7c4;overflow-wrap:anywhere}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}.metric{background:#121620;padding:16px;border-radius:10px}.metric strong{display:block;font-size:23px;margin-top:8px}.metric small{color:#afb8d0}.notice{color:#ffd18c}.fine{font-size:14px}table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}td,th{text-align:right;padding:10px 6px;border-bottom:1px solid #303749}th{color:#bdc6dd}details summary{cursor:pointer;font-weight:600}details p{font-size:16px}footer{color:#8d98b0;font-size:14px;padding:10px 0 25px}@media(max-width:850px){.workspace{grid-template-columns:1fr}#channels{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}header{align-items:flex-start;flex-direction:column}.metrics{grid-template-columns:1fr}main{padding:24px 16px}.panel{padding:18px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style></head><body><main>
+<header><div><div class="eyebrow">GROOVE LAB / ÁLGEBRA LINEAL</div><h1>Escuchá una combinación lineal</h1><p>Tres señales. Una mezcla. Explorá cómo los vectores también suenan.</p></div><div class="tag">Práctica 3 · Opción 7</div></header>
+<div class="panel row"><label style="margin:0" for="preset">Experimento</label><select id="preset"><option value="harmonics">Construir un timbre</option><option value="cancel">Cancelación de fase</option><option value="double">Sumar señales iguales</option><option value="zero">Vector cero</option></select><button id="play" class="primary">Escuchar mezcla · 3 s</button><button id="stop">Detener</button><span id="status" role="status" aria-live="polite">Listo para experimentar</span></div>
+<div class="workspace"><aside id="channels"></aside><section>
+<div class="panel"><h2>Ondas de las señales y su mezcla</h2><div class="legend"><b style="color:#aa95ff">Señal 1</b><b style="color:#68d6ff">Señal 2</b><b style="color:#ffc47b">Señal 3</b><b style="color:#a4f7c4">Mezcla</b></div><canvas id="scope" role="img" aria-label="Gráfica de amplitud de las tres señales y la mezcla durante 10 milisegundos"></canvas><p class="fine">Eje horizontal: tiempo de 0 a 10 ms. Eje vertical: amplitud sin normalizar. La escala vertical se adapta para mostrar la suma completa.</p><div id="formula" class="formula"></div><div class="metrics"><div class="metric"><small>Pico muestreado en 1 segundo</small><strong id="peak"></strong></div><div class="metric"><small>Valor RMS en 1 segundo</small><strong id="rms"></strong></div><div class="metric"><small>Escala vertical de la gráfica</small><strong id="scale"></strong></div></div><p id="warning" class="fine notice"></p></div>
+<div class="panel"><h2>Verificá la suma por componentes</h2><div style="overflow:auto"><table><thead><tr><th>t (ms)</th><th>a₁s₁(t)</th><th>a₂s₂(t)</th><th>a₃s₃(t)</th><th>y(t)</th></tr></thead><tbody id="samples"></tbody></table></div><p class="fine">Valores redondeados a cuatro decimales; los cálculos usan precisión completa.</p></div>
+<details class="panel" open><summary>¿Dónde están los espacios vectoriales?</summary><p>Cada señal es una función real sᵢ(t) = sen(2πfᵢt + φᵢ). La mezcla y(t) = a₁s₁(t) + a₂s₂(t) + a₃s₃(t) es una combinación lineal. Con frecuencias y fases fijas, todas las combinaciones con coeficientes reales forman el subespacio generado por esas señales.</p><p>Al muestrear el audio, cada señal se representa mediante un vector de N muestras en ℝᴺ. Sumar señales equivale a sumar sus muestras y cambiar un coeficiente equivale a multiplicar el vector por un escalar.</p><p>Los controles limitan los coeficientes entre −1 y 1 por comodidad. Ese conjunto limitado no es, por sí mismo, un espacio vectorial. Cambiar frecuencia o fase cambia las señales generadoras. Las señales iguales son dependientes; con coeficientes opuestos se obtiene el vector cero.</p><p>La reproducción usa un factor fijo de 0,25 y un fundido de 10 ms en los extremos para evitar saturación y clics. La gráfica, el pico y las muestras muestran la mezcla matemática original. No se aplica normalización automática.</p></details>
+</section></div><footer>Laboratorio educativo de síntesis y mezcla · Sin archivos externos ni cuentas · Iniciá con volumen bajo.</footer></main>
+<script>
+'use strict';
+
+const colors = ['#aa95ff', '#68d6ff', '#ffc47b'];
+const limits = { f: [55, 880], a: [-1, 1], p: [0, 360] };
+let signals = [
+  { f: 220, a: 0.6, p: 0 },
+  { f: 440, a: 0.3, p: 0 },
+  { f: 660, a: 0.15, p: 0 },
+];
+let ctx;
+let source;
+let playGeneration = 0;
+const $ = id => document.getElementById(id);
+
+// Los textos se insertan como texto y los atributos proceden de constantes.
+function makeNode(tag, attributes = {}, text) {
+  const node = document.createElement(tag);
+  Object.entries(attributes).forEach(([name, value]) => node.setAttribute(name, String(value)));
+  if (text !== undefined) node.textContent = String(text);
+  return node;
+}
+
+function mount() {
+  const channels = signals.map((signal, index) => {
+    const panel = makeNode('div', { class: 'panel channel', style: `--c:${colors[index]}` });
+    panel.append(makeNode('h3', {}, `Señal ${index + 1} · seno`));
+    const controls = [
+      ['f', 'Frecuencia', 1],
+      ['a', 'Coeficiente / amplitud', 0.05],
+      ['p', 'Fase', 15],
+    ];
+    controls.forEach(([key, name, step]) => {
+      const id = key + index;
+      const label = makeNode('label', { for: id }, name + ' ');
+      label.append(makeNode('span', { id: key + 'v' + index }));
+      const control = makeNode('input', {
+        id, type: 'range', min: limits[key][0], max: limits[key][1],
+        step, value: signal[key],
+      });
+      control.addEventListener('input', event => {
+        const value = Number(event.target.value);
+        if (!Number.isFinite(value)) {
+          control.value = String(signal[key]);
+          return;
+        }
+        signal[key] = Math.min(limits[key][1], Math.max(limits[key][0], value));
+        control.value = String(signal[key]);
+        stop();
+        update();
+      });
+      panel.append(label, control);
+    });
+    return panel;
+  });
+  $('channels').replaceChildren(...channels);
+  update();
+}
+
+function components(t) {
+  return signals.map(signal => signal.a * Math.sin(2 * Math.PI * signal.f * t + signal.p * Math.PI / 180));
+}
+
+function mix(t) {
+  return components(t).reduce((total, value) => total + value, 0);
+}
+
+function measure() {
+  let peak = 0;
+  let sum = 0;
+  const count = 48000;
+  const coefficients = signals.map(signal => ({
+    amplitude: signal.a,
+    rate: 2 * Math.PI * signal.f / count,
+    phase: signal.p * Math.PI / 180,
+  }));
+  // Sin crear un arreglo de componentes nuevo para cada muestra.
+  for (let j = 0; j < count; j++) {
+    let value = 0;
+    for (const signal of coefficients) value += signal.amplitude * Math.sin(signal.rate * j + signal.phase);
+    peak = Math.max(peak, Math.abs(value));
+    sum += value * value;
+  }
+  return { peak, rms: Math.sqrt(sum / count) };
+}
+
+function fmt(value, decimals = 4) {
+  return (Math.abs(value) < 0.5 * 10 ** (-decimals) ? 0 : value).toFixed(decimals);
+}
+
+function update() {
+  signals.forEach((signal, index) => {
+    $('fv' + index).textContent = signal.f + ' Hz';
+    $('av' + index).textContent = fmt(signal.a, 2);
+    $('pv' + index).textContent = signal.p + '°';
+  });
+  $('formula').textContent = 'y(t) = ' + signals.map((signal, index) =>
+    `(${fmt(signal.a, 2)})s${['₁', '₂', '₃'][index]}(t)`).join(' + ');
+  const metrics = measure();
+  $('peak').textContent = fmt(metrics.peak);
+  $('rms').textContent = fmt(metrics.rms);
+  $('warning').textContent = metrics.peak > 1
+    ? 'La mezcla supera ±1. En una salida digital sin atenuación podría saturar. La escucha aquí usa siempre el mismo factor de 0,25.'
+    : 'La mezcla se mantiene dentro de ±1. La escucha usa un factor fijo de 0,25.';
+  const rows = [0, 0.5, 1, 1.5, 2, 2.5].map(ms => {
+    const parts = components(ms / 1000);
+    const row = makeNode('tr');
+    const values = [fmt(ms, 1), ...parts.map(value => fmt(value)), fmt(parts.reduce((a, b) => a + b, 0))];
+    values.forEach(value => row.append(makeNode('td', {}, value)));
+    return row;
+  });
+  $('samples').replaceChildren(...rows);
+  draw();
+}
+
+function draw() {
+  const canvas = $('scope');
+  const ratio = window.devicePixelRatio || 1;
+  const width = canvas.clientWidth;
+  const height = 270;
+  if (width <= 60) return;
+  canvas.width = Math.round(width * ratio);
+  canvas.height = height * ratio;
+  const painter = canvas.getContext('2d');
+  if (!painter) return;
+  painter.scale(ratio, ratio);
+  const bound = Math.max(1, signals.reduce((total, signal) => total + Math.abs(signal.a), 0));
+  $('scale').textContent = '±' + fmt(bound, 2);
+  painter.strokeStyle = '#2a3347';
+  painter.lineWidth = 1;
+  painter.font = '13px Segoe UI';
+  painter.fillStyle = '#aab4cd';
+  for (let j = 0; j <= 4; j++) {
+    const y = 20 + j * (height - 40) / 4;
+    painter.beginPath();
+    painter.moveTo(45, y);
+    painter.lineTo(width - 12, y);
+    painter.stroke();
+    painter.fillText(fmt(bound * (1 - j / 2), 1), 4, y + 4);
+  }
+  for (let channel = 0; channel < 4; channel++) {
+    painter.strokeStyle = channel === 3 ? '#a4f7c4' : colors[channel];
+    painter.lineWidth = channel === 3 ? 2.8 : 1.2;
+    painter.globalAlpha = channel === 3 ? 1 : 0.65;
+    painter.beginPath();
+    for (let x = 0; x <= width - 60; x++) {
+      const time = x / (width - 60) * 0.01;
+      const value = channel === 3 ? mix(time) : components(time)[channel];
+      const y = height / 2 - value / bound * (height - 40) / 2;
+      if (x === 0) painter.moveTo(x + 45, y);
+      else painter.lineTo(x + 45, y);
+    }
+    painter.stroke();
+  }
+  painter.globalAlpha = 1;
+}
+
+function stop() {
+  // Invalida también las reproducciones que todavía esperan a resume().
+  playGeneration++;
+  if (source) {
+    const activeSource = source;
+    source = null;
+    activeSource.onended = null;
+    try { activeSource.stop(); } catch (error) { /* Ya finalizó o no llegó a iniciar. */ }
+    activeSource.disconnect();
+  }
+  $('status').textContent = 'Audio detenido';
+}
+
+async function play() {
+  stop();
+  const generation = playGeneration;
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) throw new Error('Web Audio no está disponible');
+    if (!ctx || ctx.state === 'closed') ctx = new AudioContextClass();
+    const audioContext = ctx;
+    await audioContext.resume();
+    if (generation !== playGeneration) return;
+    const length = Math.round(audioContext.sampleRate * 3);
+    const buffer = audioContext.createBuffer(1, length, audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let j = 0; j < length; j++) {
+      const fade = Math.min(1, j / (audioContext.sampleRate * 0.01), (length - 1 - j) / (audioContext.sampleRate * 0.01));
+      data[j] = mix(j / audioContext.sampleRate) * 0.25 * fade;
+    }
+    const activeSource = audioContext.createBufferSource();
+    source = activeSource;
+    activeSource.buffer = buffer;
+    activeSource.connect(audioContext.destination);
+    activeSource.onended = () => {
+      activeSource.disconnect();
+      if (source === activeSource) {
+        source = null;
+        $('status').textContent = 'Reproducción terminada';
+      }
+    };
+    activeSource.start();
+    $('status').textContent = 'Reproduciendo mezcla durante 3 segundos';
+  } catch (error) {
+    if (generation !== playGeneration) return;
+    stop();
+    $('status').textContent = 'No se pudo iniciar el audio. Probá en un navegador actualizado.';
+  }
+}
+
+$('play').addEventListener('click', play);
+$('stop').addEventListener('click', stop);
+$('preset').addEventListener('change', event => {
+  stop();
+  const preset = event.target.value;
+  signals = preset === 'cancel'
+    ? [{ f: 220, a: 0.7, p: 0 }, { f: 220, a: 0.7, p: 180 }, { f: 660, a: 0, p: 0 }]
+    : preset === 'double'
+      ? [{ f: 220, a: 0.7, p: 0 }, { f: 220, a: 0.7, p: 0 }, { f: 660, a: 0, p: 0 }]
+      : preset === 'zero'
+        ? [{ f: 220, a: 0, p: 0 }, { f: 440, a: 0, p: 0 }, { f: 660, a: 0, p: 0 }]
+        : [{ f: 220, a: 0.6, p: 0 }, { f: 440, a: 0.3, p: 0 }, { f: 660, a: 0.15, p: 0 }];
+  mount();
+});
+window.addEventListener('resize', draw);
+window.addEventListener('pagehide', stop);
+mount();
+
+</script></body></html>
